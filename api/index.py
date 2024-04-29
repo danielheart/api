@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 import numpy as np
 from flask_cors import CORS
+import os
+from notion_client import Client
 
 app = Flask(__name__)
 CORS(app)
@@ -21,11 +23,182 @@ def sum_numbers():
     return jsonify({'result': result})
 
 
-@app.route('/callback', methods=['GET'])
-def callback():
-    code = request.args.get('code')  # 提取授权码参数
-    print('code', code)
-    return 'Authorization code: {}'.format(code)
+# 初始化 Notion 客户端
+NOTION_TOKEN = os.environ.get("NOTION_TOKEN")
+notion = Client(auth=NOTION_TOKEN)
+
+append_block_data = {
+    "parent": {
+        "database_id": "0a7d58a4923e486bb61d0121f5209f15"
+    },
+    "properties": {
+        "Word": {
+            "title": [
+                {
+                    "text": {
+                        "content": "integration"
+                    }
+                }
+            ]
+        },
+        "Phonetics": {
+            "rich_text": [
+                {
+                    "text": {
+                        "content": "/ˌɪntɪˈɡreɪʃn/"
+                    }
+                }
+            ]
+        },
+        "Meaning": {
+            "rich_text": [
+                {
+                    "text": {
+                        "content": "the action or process of integrating."
+                    }
+                }
+            ]
+        },
+        "Example": {
+            "rich_text": [
+                {
+                    "text": {
+                        "content": "\"economic and political integration\""
+                    }
+                }
+            ]
+        },
+        "State": {
+            "select": {
+                "name": "New"
+            }
+        },
+        "Source": {
+            "rich_text": [
+                {
+                    "text": {
+                        "content": "Authorization",
+                        "link": {
+                            "url": "https://developers.notion.com/docs/authorization#step-2-notion-redirects-the-user-to-the-integrations-redirect-uri-and-includes-a-code-parameter"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "icon": {
+        "type": "emoji",
+        "emoji": "🐣"
+    },
+    "children": [
+        {
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+                "text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "noun"
+                        },
+                        "annotations": {
+                            "italic": True,
+                            "color": "gray"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "object": "block",
+            "type": "numbered_list_item",
+            "numbered_list_item": {
+                "text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "the action or process of integrating.\n"
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "\"economic and political integration\""
+                        },
+                        "annotations": {
+                            "color": "gray"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "object": "block",
+            "type": "numbered_list_item",
+            "numbered_list_item": {
+                "text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "the finding of an integral or integrals.\n"
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "\"integration of an ordinary differential equation\""
+                        },
+                        "annotations": {
+                            "color": "gray"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+                "text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": ""
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "object": "block",
+            "type": "audio",
+            "audio": {
+                "external": {
+                    "url": "https://ssl.gstatic.com/dictionary/static/sounds/20220808/integration--_gb_1.mp3"
+                }
+            }
+        }
+    ]
+}
+# append_block_data = jsonify(data)
+
+
+@app.route('/savetonotion', methods=['POST'])
+def savetonotion():
+    try:
+        # 从请求中获取数据（这里假设你有一个名为 appendBlockData 的 JSON 数据）
+        append_block_data = request.json
+
+        # 发送请求到 Notion API
+        response = notion.pages.create(
+            parent={"database_id": "YOUR_DATABASE_ID"}, properties=append_block_data)
+
+        if response.get('id'):
+            return jsonify({"message": "success!"}), 200
+        else:
+            return jsonify({"message": "error"}), 500
+    except Exception as e:
+        return jsonify({"message": f"Error: {str(e)}"}), 500
 
 
 @app.route('/transform', methods=['POST'])
